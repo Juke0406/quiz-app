@@ -5,6 +5,7 @@ import { QuizMaker } from "./pages/QuizMaker";
 import { QuizList } from "./pages/QuizList";
 import { QuizTaker } from "./pages/QuizTaker";
 import { Toaster } from "@/components/ui/toaster";
+import { AccessCode } from "@/components/AccessCode";
 
 function App() {
   const fetchQuizzes = useQuizStore((state) => state.fetchQuizzes);
@@ -19,8 +20,8 @@ function App() {
         <main className="container mx-auto py-8">
           <Routes>
             <Route path="/" element={<QuizList />} />
-            <Route path="/create" element={<QuizMaker />} />
-            <Route path="/edit/:id" element={<QuizMaker />} />
+            <Route path="/create" element={<AccessCode><QuizMaker /></AccessCode>} />
+            <Route path="/edit/:id" element={<AccessCode><QuizMaker /></AccessCode>} />
             <Route path="/quiz/:id" element={<QuizTaker />} />
           </Routes>
         </main>
