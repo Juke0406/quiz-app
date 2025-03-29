@@ -1,54 +1,106 @@
-# React + TypeScript + Vite
+# Quiz App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, interactive quiz application. Create, edit, and take quizzes with support for multiple-choice questions, code snippets, and images.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Create and manage quizzes** with an intuitive interface
+- **Password protection** for restricting quiz access
+- **Multiple question types** including:
+  - Single-choice questions
+  - Multiple-choice questions
+  - Questions with code snippets
+  - Questions with images
+- **Image optimization** with automatic compression for better performance
+- **Responsive design** that works on desktop and mobile devices
+- **Cloud storage** with Supabase backend (with local fallback)
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend**:
+  - React 19
+  - TypeScript
+  - Vite (for fast development and optimized builds)
+  - React Router (for navigation)
+  - Zustand (for state management)
+  - Tailwind CSS (for styling)
+  - Radix UI (for accessible UI components)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- **Backend & Storage**:
+  - Supabase (for backend-as-a-service)
+
+- **Other Tools**:
+  - React Hook Form (for form management)
+  - Zod (for schema validation)
+  - Lucide React (for icons)
+  - browser-image-compression (for optimizing uploaded images)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- pnpm, npm, or yarn
+
+### Environment Setup
+
+Create a `.env` file in the root directory with the following variables:
+
+```shell
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Installation
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Install dependencies
+pnpm install
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+# Start development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Preview production build
+pnpm preview
 ```
+
+### Supabase Setup
+
+1. Create a new Supabase project
+2. Create a table called `quizzes` with the following structure:
+   - id (uuid, primary key)
+   - title (text)
+   - password (text, nullable)
+   - questions (json)
+3. Enable storage for quiz images
+
+## Usage
+
+### Creating a Quiz
+
+1. Click "Create Quiz" on the home page
+2. Add a title and optional password
+3. Add questions by clicking "Add Question"
+4. For each question:
+   - Enter question text
+   - Toggle "Allow multiple answers" if needed
+   - Optionally add a code snippet or image
+   - Add options and mark correct answers
+5. Click "Save Quiz" when finished
+
+### Taking a Quiz
+
+1. Click on a quiz from the home page
+2. Enter the password if required
+3. Answer all questions
+4. Click "Submit Quiz" to see your results
+
+### Editing a Quiz
+
+1. Find the quiz on the home page
+2. Click the "Edit" button
+3. Make your changes
+4. Save the updated quiz
