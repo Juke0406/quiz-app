@@ -449,7 +449,7 @@ export function QuizTaker() {
                                   >
                                     <span>
                                       {selectedPosition > 0
-                                        ? `Position ${selectedPosition}${
+                                        ? `${selectedPosition}${
                                             isPositionAssigned(question.id, selectedPosition, selectedPosition === selectedPosition ? item.id : undefined)
                                               ? " (used)"
                                               : ""
