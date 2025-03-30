@@ -8,10 +8,27 @@ export interface Option {
   isCorrect: boolean;
 }
 
+export interface BlankItem {
+  id: string;
+  answer: string; // Correct answer
+  userAnswer?: string; // User's input answer
+}
+
+export interface SequenceItem {
+  id: string;
+  text: string;
+  correctPosition: number;
+}
+
+export type QuestionType = 'multiple-choice' | 'fill-in-blanks' | 'sequence-arrangement';
+
 export interface Question {
   id: string;
   text: string;
+  type: QuestionType;
   options: Option[];
+  blanks?: BlankItem[];
+  sequenceItems?: SequenceItem[];
   codeSnippet?: string;
   image?: {
     data: string; // base64 string
@@ -19,6 +36,8 @@ export interface Question {
     path?: string;
   };
   isMultipleAnswer: boolean;
+  // For sequence questions, this can track pre-filled positions
+  preFilledPositions?: number[];
 }
 
 export interface Quiz {

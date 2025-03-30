@@ -4,11 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuizStore, type Question, type Option } from "@/store/useQuizStore";
-import { Plus, Trash2, Save, FileImage, Code } from "lucide-react";
+import { useQuizStore, type Question, type Option, type QuestionType, type BlankItem, type SequenceItem } from "@/store/useQuizStore";
+import { Plus, Trash2, Save, FileImage, Code, ChevronDown } from "lucide-react";
 import { uploadImage, deleteImage, verifyImage } from "@/lib/imageUpload";
 import imageCompression from "browser-image-compression";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function QuizMaker() {
   const navigate = useNavigate();
@@ -37,13 +43,23 @@ export function QuizMaker() {
     }
   }, [id, getQuiz, navigate]);
 
-  const addQuestion = () => {
+  const addQuestion = (type: QuestionType = 'multiple-choice') => {
     const newQuestion: Question = {
       id: crypto.randomUUID(),
       text: "",
+      type,
       options: [],
       isMultipleAnswer: false,
     };
+    
+    // Initialize appropriate fields based on question type
+    if (type === 'fill-in-blanks') {
+      newQuestion.blanks = [];
+    } else if (type === 'sequence-arrangement') {
+      newQuestion.sequenceItems = [];
+      newQuestion.preFilledPositions = [];
+    }
+    
     setQuestions([...questions, newQuestion]);
   };
 
@@ -108,6 +124,112 @@ export function QuizMaker() {
       questions.map((q) =>
         q.id === questionId
           ? { ...q, options: q.options.filter((o) => o.id !== optionId) }
+          : q
+      )
+    );
+  };
+  
+  // Fill in the blanks question functions
+  const addBlank = (questionId: string) => {
+    const newBlank: BlankItem = {
+      id: crypto.randomUUID(),
+      answer: ""
+    };
+    
+    setQuestions(
+      questions.map((q) =>
+        q.id === questionId && q.blanks 
+          ? { ...q, blanks: [...q.blanks, newBlank] }
+          : q
+      )
+    );
+  };
+  
+  const updateBlank = (
+    questionId: string,
+    blankId: string,
+    answer: string
+  ) => {
+    setQuestions(
+      questions.map((q) => {
+        if (q.id === questionId && q.blanks) {
+          return {
+            ...q,
+            blanks: q.blanks.map((b) =>
+              b.id === blankId ? { ...b, answer } : b
+            )
+          };
+        }
+        return q;
+      })
+    );
+  };
+  
+  const removeBlank = (questionId: string, blankId: string) => {
+    setQuestions(
+      questions.map((q) =>
+        q.id === questionId && q.blanks
+          ? { ...q, blanks: q.blanks.filter((b) => b.id !== blankId) }
+          : q
+      )
+    );
+  };
+  
+  // Sequence arrangement question functions
+  const addSequenceItem = (questionId: string) => {
+    const question = questions.find(q => q.id === questionId);
+    const nextPosition = question?.sequenceItems?.length ? question.sequenceItems.length + 1 : 1;
+    
+    const newItem: SequenceItem = {
+      id: crypto.randomUUID(),
+      text: "",
+      correctPosition: nextPosition
+    };
+    
+    setQuestions(
+      questions.map((q) =>
+        q.id === questionId && q.sequenceItems 
+          ? { ...q, sequenceItems: [...q.sequenceItems, newItem] }
+          : q
+      )
+    );
+  };
+  
+  const updateSequenceItem = (
+    questionId: string,
+    itemId: string,
+    updates: Partial<SequenceItem>
+  ) => {
+    setQuestions(
+      questions.map((q) => {
+        if (q.id === questionId && q.sequenceItems) {
+          return {
+            ...q,
+            sequenceItems: q.sequenceItems.map((item) =>
+              item.id === itemId ? { ...item, ...updates } : item
+            )
+          };
+        }
+        return q;
+      })
+    );
+  };
+  
+  const removeSequenceItem = (questionId: string, itemId: string) => {
+    setQuestions(
+      questions.map((q) =>
+        q.id === questionId && q.sequenceItems
+          ? { ...q, sequenceItems: q.sequenceItems.filter((item) => item.id !== itemId) }
+          : q
+      )
+    );
+  };
+  
+  const updatePreFilledPositions = (questionId: string, positions: number[]) => {
+    setQuestions(
+      questions.map((q) =>
+        q.id === questionId
+          ? { ...q, preFilledPositions: positions }
           : q
       )
     );
@@ -269,19 +391,52 @@ export function QuizMaker() {
     }
 
     questions.forEach((question, index) => {
-      // Check if question has at least 2 options
-      if (question.options.length < 2) {
-        errors.push(`Question ${index + 1} must have at least 2 options`);
+      const questionNum = index + 1;
+      
+      if (!question.text) {
+        errors.push(`Question ${questionNum} text is required`);
       }
+      
+      if (question.type === 'multiple-choice') {
+        // Multiple choice validation
+        if (question.options.length < 2) {
+          errors.push(`Question ${questionNum} must have at least 2 options`);
+        }
 
-      // Check if question has at least 1 correct answer
-      const hasCorrectOption = question.options.some(
-        (option) => option.isCorrect
-      );
-      if (!hasCorrectOption) {
-        errors.push(
-          `Question ${index + 1} must have at least one correct answer`
-        );
+        // Check if question has at least 1 correct answer
+        const hasCorrectOption = question.options.some(option => option.isCorrect);
+        if (!hasCorrectOption) {
+          errors.push(`Question ${questionNum} must have at least one correct answer`);
+        }
+      } 
+      else if (question.type === 'fill-in-blanks') {
+        // Fill in the blanks validation
+        if (!question.blanks || question.blanks.length === 0) {
+          errors.push(`Question ${questionNum} must have at least one blank to fill`);
+        } else {
+          const emptyBlanks = question.blanks.some(blank => !blank.answer.trim());
+          if (emptyBlanks) {
+            errors.push(`Question ${questionNum} has empty answers for blanks`);
+          }
+        }
+      } 
+      else if (question.type === 'sequence-arrangement') {
+        // Sequence arrangement validation
+        if (!question.sequenceItems || question.sequenceItems.length < 2) {
+          errors.push(`Question ${questionNum} must have at least 2 sequence items`);
+        } else {
+          const emptyItems = question.sequenceItems.some(item => !item.text.trim());
+          if (emptyItems) {
+            errors.push(`Question ${questionNum} has empty sequence items`);
+          }
+          
+          // Check if there are duplicate positions
+          const positions = question.sequenceItems.map(item => item.correctPosition);
+          const uniquePositions = new Set(positions);
+          if (uniquePositions.size !== positions.length) {
+            errors.push(`Question ${questionNum} has duplicate positions in the sequence`);
+          }
+        }
       }
     });
 
@@ -400,21 +555,24 @@ export function QuizMaker() {
                 />
               </div>
 
-              <div>
-                <label className="inline-flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={question.isMultipleAnswer}
-                    onChange={(e) =>
-                      updateQuestion(question.id, {
-                        isMultipleAnswer: e.target.checked,
-                      })
-                    }
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Allow multiple answers</span>
-                </label>
-              </div>
+              {/* Show multiple answer option only for multiple-choice questions */}
+              {question.type === 'multiple-choice' && (
+                <div>
+                  <label className="inline-flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={question.isMultipleAnswer}
+                      onChange={(e) =>
+                        updateQuestion(question.id, {
+                          isMultipleAnswer: e.target.checked,
+                        })
+                      }
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm">Allow multiple answers</span>
+                  </label>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="flex items-center gap-2">
@@ -487,85 +645,320 @@ export function QuizMaker() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium">Options</label>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addOption(question.id)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Option
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  {question.options.map((option, optionIndex) => (
-                    <div key={option.id} className="relative">
-                      <div
-                        className={`
-                        border rounded-md p-2 pr-10
-                        ${
-                          option.isCorrect
-                            ? "border-green-500"
-                            : "border-gray-200"
-                        }
-                        hover:border-gray-300 transition-colors
-                      `}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center justify-center w-6 h-6">
-                            <input
-                              type={
-                                question.isMultipleAnswer ? "checkbox" : "radio"
-                              }
-                              name={`correct-${question.id}`}
-                              checked={option.isCorrect}
-                              onChange={(e) =>
-                                updateOption(question.id, option.id, {
-                                  isCorrect: e.target.checked,
-                                })
-                              }
-                              className="h-6 w-6 rounded border-gray-300 text-green-600 focus:ring-green-600"
-                              aria-label="Mark as correct answer"
-                              title="Mark as correct answer"
-                            />
-                          </div>
-                          <Input
-                            value={option.text}
-                            onChange={(e) =>
-                              updateOption(question.id, option.id, {
-                                text: e.target.value,
-                              })
-                            }
-                            placeholder={`Option ${optionIndex + 1}`}
-                            className="flex-1 border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          />
-                        </div>
-                      </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Question Type</label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      {question.type === 'multiple-choice' ? 'Multiple Choice' : 
+                       question.type === 'fill-in-blanks' ? 'Fill in the Blanks' : 
+                       'Sequence Arrangement'}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem 
+                      onClick={() => updateQuestion(question.id, { 
+                        type: 'multiple-choice',
+                        blanks: undefined,
+                        sequenceItems: undefined,
+                        preFilledPositions: undefined,
+                      })}
+                      className={question.type === 'multiple-choice' ? "bg-blue-50" : ""}
+                    >
+                      Multiple Choice
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => updateQuestion(question.id, { 
+                        type: 'fill-in-blanks',
+                        blanks: [],
+                        sequenceItems: undefined,
+                        preFilledPositions: undefined,
+                      })}
+                      className={question.type === 'fill-in-blanks' ? "bg-blue-50" : ""}
+                    >
+                      Fill in the Blanks
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => updateQuestion(question.id, { 
+                        type: 'sequence-arrangement',
+                        blanks: undefined,
+                        sequenceItems: [],
+                        preFilledPositions: [],
+                      })}
+                      className={question.type === 'sequence-arrangement' ? "bg-blue-50" : ""}
+                    >
+                      Sequence Arrangement
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* Multiple Choice Question Editor */}
+              {question.type === 'multiple-choice' && (
+                <div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-sm font-medium">Options</label>
                       <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                        onClick={() => removeOption(question.id, option.id)}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => addOption(question.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Option
                       </Button>
                     </div>
-                  ))}
+
+                    <div className="space-y-2">
+                      {question.options.map((option, optionIndex) => (
+                        <div key={option.id} className="relative">
+                          <div
+                            className={`
+                            border rounded-md p-2 pr-10
+                            ${
+                              option.isCorrect
+                                ? "border-green-500"
+                                : "border-gray-200"
+                            }
+                            hover:border-gray-300 transition-colors
+                          `}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-center w-6 h-6">
+                                <input
+                                  type={
+                                    question.isMultipleAnswer ? "checkbox" : "radio"
+                                  }
+                                  name={`correct-${question.id}`}
+                                  checked={option.isCorrect}
+                                  onChange={(e) =>
+                                    updateOption(question.id, option.id, {
+                                      isCorrect: e.target.checked,
+                                    })
+                                  }
+                                  className="h-6 w-6 rounded border-gray-300 text-green-600 focus:ring-green-600"
+                                  aria-label="Mark as correct answer"
+                                  title="Mark as correct answer"
+                                />
+                              </div>
+                              <Input
+                                value={option.text}
+                                onChange={(e) =>
+                                  updateOption(question.id, option.id, {
+                                    text: e.target.value,
+                                  })
+                                }
+                                placeholder={`Option ${optionIndex + 1}`}
+                                className="flex-1 border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                            onClick={() => removeOption(question.id, option.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Fill in the Blanks Question Editor */}
+              {question.type === 'fill-in-blanks' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium">Blank Fields</label>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => addBlank(question.id)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Blank
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {question.blanks?.map((blank, index) => (
+                      <div key={blank.id} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">
+                            Blank {index + 1} Answer
+                          </label>
+                          <Input
+                            value={blank.answer}
+                            onChange={(e) => updateBlank(question.id, blank.id, e.target.value)}
+                            placeholder={`Answer for blank ${index + 1}`}
+                          />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="mt-6"
+                          onClick={() => removeBlank(question.id, blank.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800 mt-2">
+                    <p className="font-semibold mb-1">Instructions:</p>
+                    <p>
+                      Include underscores (_____) in your question text to indicate where blanks should appear. 
+                      For example: "The capital of France is _____."
+                    </p>
+                    <p className="mt-2">
+                      The blanks you add below will be matched with the underscores in order.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Sequence Arrangement Question Editor */}
+              {question.type === 'sequence-arrangement' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium">Sequence Items</label>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => addSequenceItem(question.id)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Item
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {question.sequenceItems?.map((item, index) => (
+                      <div key={item.id} className="flex items-center gap-2">
+                        <div className="w-28 flex-shrink-0">
+                          <label className="block text-xs font-medium mb-1">Position</label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between">
+                                {item.correctPosition}
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              {Array.from(
+                                { length: question.sequenceItems?.length || 0 },
+                                (_, i) => i + 1
+                              ).map((pos) => (
+                                <DropdownMenuItem
+                                  key={pos}
+                                  className={pos === item.correctPosition ? "bg-blue-50" : ""}
+                                  onClick={() => updateSequenceItem(
+                                    question.id,
+                                    item.id,
+                                    { correctPosition: pos }
+                                  )}
+                                >
+                                  {pos}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium mb-1">Item Text</label>
+                          <Input
+                            value={item.text}
+                            onChange={(e) => updateSequenceItem(
+                              question.id, 
+                              item.id, 
+                              { text: e.target.value }
+                            )}
+                            placeholder={`Sequence item ${index + 1}`}
+                          />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="mt-6"
+                          onClick={() => removeSequenceItem(question.id, item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Pre-filled positions section */}
+                  {question.sequenceItems && question.sequenceItems.length > 0 && (
+                    <div className="pt-4 border-t">
+                      <label className="block text-sm font-medium mb-2">
+                        Pre-filled Positions (Optional)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {question.sequenceItems.map((item) => {
+                          const position = item.correctPosition;
+                          const isPreFilled = question.preFilledPositions?.includes(position);
+                          
+                          return (
+                            <button
+                              key={item.id}
+                              className={`px-3 py-1 rounded-md text-sm ${
+                                isPreFilled 
+                                  ? "bg-blue-100 text-blue-800 border border-blue-300" 
+                                  : "bg-gray-100 text-gray-700 border border-gray-200"
+                              }`}
+                              onClick={() => {
+                                const currentPositions = question.preFilledPositions || [];
+                                const newPositions = isPreFilled
+                                  ? currentPositions.filter(p => p !== position)
+                                  : [...currentPositions, position];
+                                
+                                updatePreFilledPositions(question.id, newPositions);
+                              }}
+                            >
+                              Position {position}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Click on positions that should be pre-filled (revealed) to the student
+                      </p>
+                    </div>
+                  )}
+                  
+                  {(!question.sequenceItems || question.sequenceItems.length === 0) && (
+                    <p className="text-sm text-gray-500 italic">
+                      Add sequence items in their correct order. Students will arrange these items using dropdown menus.
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="flex justify-between">
-        <Button onClick={addQuestion}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Question
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => addQuestion('multiple-choice')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Multiple Choice
+          </Button>
+          <Button onClick={() => addQuestion('fill-in-blanks')} variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Fill-in-Blanks
+          </Button>
+          <Button onClick={() => addQuestion('sequence-arrangement')} variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Sequence Question
+          </Button>
+        </div>
         <Button
           onClick={handleSave}
           disabled={!title || questions.length === 0}
