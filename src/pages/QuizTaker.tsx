@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Extended question type to include the source quiz title
+interface ExtendedQuestion extends Question {
+  quizTitle?: string;
+}
+
+// Extended quiz type with the extended questions
+interface ExtendedQuiz extends Omit<Quiz, 'questions'> {
+  questions: ExtendedQuestion[];
+}
+
 interface UserAnswer {
   questionId: string;
   selectedOptionIds: string[];
@@ -23,8 +33,47 @@ interface UserAnswer {
 export function QuizTaker() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const quiz = useQuizStore((state) => state.getQuiz(id!));
-  const [isPasswordVerified, setIsPasswordVerified] = useState(!quiz?.password);
+  const quizzes = useQuizStore((state) => state.quizzes);
+  const getQuiz = useQuizStore((state) => state.getQuiz);
+  
+  // Handle the "all quizzes" special case
+  const isAllQuizzes = id === "all";
+  
+  // For "all quizzes" mode, combine all quizzes (all quizzes share the same password if they have one)
+  const quiz = useMemo(() => {
+    if (isAllQuizzes) {
+      if (quizzes.length === 0) {
+        return null;
+      }
+      
+      // Get the password from the first quiz that has one (all passwords are the same)
+      const commonPassword = quizzes.find(q => q.password)?.password || "";
+      
+      // Flatten all questions from all quizzes and add source quiz title
+      const allQuestions = quizzes.flatMap(q => 
+        q.questions.map(question => ({
+          ...question,
+          quizTitle: q.title // Add the source quiz title to each question
+        }))
+      );
+      
+      // Randomly shuffle all questions
+      const shuffledQuestions = [...allQuestions].sort(() => Math.random() - 0.5);
+      
+      // Create the combined quiz with the common password if any quiz has a password
+      return {
+        id: "all",
+        title: "All Quizzes",
+        password: commonPassword,
+        questions: shuffledQuestions
+      } as ExtendedQuiz;
+    } else {
+      // Normal single quiz
+      return getQuiz(id!) as Quiz;
+    }
+  }, [id, quizzes, getQuiz, isAllQuizzes]);
+
+  const [isPasswordVerified, setIsPasswordVerified] = useState(!quiz?.password || isAllQuizzes);
   const [password, setPassword] = useState("");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -40,13 +89,19 @@ export function QuizTaker() {
     return arrayCopy;
   };
 
-  // Shuffle questions and options when quiz is loaded and verified
+  // Shuffle options and sequence items when quiz is loaded and verified
   useEffect(() => {
     if (quiz && isPasswordVerified) {
-      // Create a deep copy of the quiz with shuffled questions and options
+      // For normal quizzes, we also shuffle the questions
+      // For "all quizzes" mode, the questions are already shuffled in the useMemo above
+      const shuffledQuestions = isAllQuizzes 
+        ? [...quiz.questions] 
+        : shuffleArray([...quiz.questions]);
+      
+      // Now shuffle options and sequence items for all questions
       const shuffled = {
         ...quiz,
-        questions: shuffleArray(quiz.questions.map(q => {
+        questions: shuffledQuestions.map(q => {
           if (q.type === 'multiple-choice') {
             // Shuffle options for multiple choice questions
             return {
@@ -61,12 +116,12 @@ export function QuizTaker() {
             };
           }
           return { ...q };
-        }))
+        })
       };
       
       setShuffledQuiz(shuffled);
     }
-  }, [quiz, isPasswordVerified]);
+  }, [quiz, isPasswordVerified, isAllQuizzes]);
 
   if (!quiz) {
     return (
@@ -303,6 +358,14 @@ export function QuizTaker() {
           <h1 className="text-3xl font-bold">{quiz.title}</h1>
         </div>
       </div>
+      
+      {isAllQuizzes && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-700 font-medium">
+            You are taking all available quizzes in one session. Good luck!
+          </p>
+        </div>
+      )}
 
       <div className="space-y-6">
         {(shuffledQuiz || quiz).questions.map((question, index) => (
@@ -595,7 +658,7 @@ export function QuizTaker() {
                     ? "Great job! Nearly perfect!"
                     : score.correct >= score.total * 0.6
                     ? "Good effort! Keep practicing!"
-                    : "You sucks!"}
+                    : "You need more practice!"}
                 </p>
                 <div className="mt-6">
                   <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
