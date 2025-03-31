@@ -8,8 +8,29 @@ export function QuizList() {
   const navigate = useNavigate();
   const quizzes = useQuizStore((state) => state.quizzes);
   
-  // Sort quizzes by title
-  const sortedQuizzes = [...quizzes].sort((a, b) => a.title.localeCompare(b.title));
+  // Sort quizzes by title, handling numerical prefixes (e.g., "1. Quiz", "2. Quiz", "10. Quiz")
+  const sortedQuizzes = [...quizzes].sort((a, b) => {
+    // Check if titles start with numbers (e.g., "1. ", "10. ")
+    const numPrefixRegex = /^(\d+)\.\s+/;
+    const matchA = a.title.match(numPrefixRegex);
+    const matchB = b.title.match(numPrefixRegex);
+
+    // If both have numerical prefixes, sort numerically
+    if (matchA && matchB) {
+      const numA = parseInt(matchA[1], 10);
+      const numB = parseInt(matchB[1], 10);
+      return numA - numB;
+    } 
+    // If only one has a numerical prefix, prioritize it
+    else if (matchA) {
+      return -1; // A comes first
+    } 
+    else if (matchB) {
+      return 1;  // B comes first
+    }
+    // Otherwise, use standard alphabetical sorting
+    return a.title.localeCompare(b.title);
+  });
 
   return (
     <div className="space-y-6">
