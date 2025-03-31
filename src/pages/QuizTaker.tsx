@@ -314,7 +314,7 @@ export function QuizTaker() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-lg">{question.text}</p>
+              <p className="text-lg whitespace-pre-wrap">{question.text}</p>
 
               {question.codeSnippet && (
                 <div className="space-y-2 border rounded-lg overflow-hidden">
@@ -402,7 +402,7 @@ export function QuizTaker() {
                                 className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
                               />
                             </div>
-                            <span className="flex-1">{option.text}</span>
+                            <span className="flex-1 whitespace-pre-wrap">{option.text}</span>
                           </div>
                         </div>
                       </label>
@@ -545,7 +545,7 @@ export function QuizTaker() {
                             </div>
                             
                             {/* Item text (on the right) */}
-                            <div className="text-sm flex-1">{item.text}</div>
+                            <div className="text-sm flex-1 whitespace-pre-wrap">{item.text}</div>
                           </div>
                           
                           {showResults && !isCorrect && !isPrefilled && (
