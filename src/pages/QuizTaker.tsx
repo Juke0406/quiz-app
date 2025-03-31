@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useQuizStore, type Question } from "@/store/useQuizStore";
+import { useQuizStore, type Question, type Quiz } from "@/store/useQuizStore";
 import { ArrowLeft, Check, ChevronDown, Code, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +28,39 @@ export function QuizTaker() {
   const [password, setPassword] = useState("");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [shuffledQuiz, setShuffledQuiz] = useState<Quiz | null>(null);
+  
+  // Function to shuffle an array (Fisher-Yates algorithm)
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const arrayCopy = [...array];
+    for (let i = arrayCopy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arrayCopy[i], arrayCopy[j]] = [arrayCopy[j], arrayCopy[i]];
+    }
+    return arrayCopy;
+  };
+
+  // Shuffle questions and options when quiz is loaded and verified
+  useEffect(() => {
+    if (quiz && isPasswordVerified) {
+      // Create a deep copy of the quiz with shuffled questions and options
+      const shuffled = {
+        ...quiz,
+        questions: shuffleArray(quiz.questions.map(q => {
+          if (q.type === 'multiple-choice') {
+            // Shuffle options for multiple choice questions
+            return {
+              ...q,
+              options: shuffleArray([...q.options])
+            };
+          }
+          return { ...q };
+        }))
+      };
+      
+      setShuffledQuiz(shuffled);
+    }
+  }, [quiz, isPasswordVerified]);
 
   if (!quiz) {
     return (
@@ -46,9 +79,9 @@ export function QuizTaker() {
 
   // Initialize answers for fill-in-blanks and sequence questions
   useEffect(() => {
-    if (quiz && !userAnswers.length) {
+    if (shuffledQuiz && !userAnswers.length) {
       // Pre-initialize empty answers for the questions
-      const initialAnswers = quiz.questions.map(question => {
+      const initialAnswers = shuffledQuiz.questions.map(question => {
         const baseAnswer: UserAnswer = {
           questionId: question.id,
           selectedOptionIds: []
@@ -80,12 +113,12 @@ export function QuizTaker() {
       
       setUserAnswers(initialAnswers);
     }
-  }, [quiz]);
+  }, [shuffledQuiz]);
 
   const handleOptionSelect = (questionId: string, optionId: string) => {
     setUserAnswers((prev) => {
       const existingAnswer = prev.find((a) => a.questionId === questionId);
-      const question = quiz.questions.find((q) => q.id === questionId);
+      const question = (shuffledQuiz || quiz).questions.find((q) => q.id === questionId);
 
       if (!question) return prev;
 
@@ -209,6 +242,27 @@ export function QuizTaker() {
       ([itemId, pos]) => pos === position && itemId !== excludeItemId
     );
   };
+  
+  // Calculate the total score (number of correct answers)
+  const calculateScore = () => {
+    if (!showResults || !(shuffledQuiz || quiz)) return { correct: 0, total: 0 };
+    
+    const questions = (shuffledQuiz || quiz).questions;
+    let correctCount = 0;
+    
+    questions.forEach(question => {
+      if (isAnswerCorrect(question)) {
+        correctCount++;
+      }
+    });
+    
+    return {
+      correct: correctCount,
+      total: questions.length
+    };
+  };
+  
+  const score = calculateScore();
 
   if (!isPasswordVerified) {
     return (
@@ -245,7 +299,7 @@ export function QuizTaker() {
       </div>
 
       <div className="space-y-6">
-        {quiz.questions.map((question, index) => (
+        {(shuffledQuiz || quiz).questions.map((question, index) => (
           <Card key={question.id}>
             <CardHeader>
               <CardTitle>
@@ -517,8 +571,32 @@ export function QuizTaker() {
       </div>
 
       {showResults && (
-        <div className="text-center">
-          <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
+        <div className="text-center space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quiz Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <div className="text-5xl font-bold">
+                  <span className="text-primary">{score.correct}</span>
+                  <span className="text-gray-400">/{score.total}</span>
+                </div>
+                <p className="mt-4 text-lg">
+                  {score.correct === score.total
+                    ? "Perfect score! Excellent job!"
+                    : score.correct >= score.total * 0.8
+                    ? "Great job! Nearly perfect!"
+                    : score.correct >= score.total * 0.6
+                    ? "Good effort! Keep practicing!"
+                    : "Keep practicing, you'll improve!"}
+                </p>
+                <div className="mt-6">
+                  <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

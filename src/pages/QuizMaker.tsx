@@ -546,12 +546,13 @@ export function QuizMaker() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Question Text</label>
-                <Input
+                <Textarea
                   value={question.text}
                   onChange={(e) =>
                     updateQuestion(question.id, { text: e.target.value })
                   }
                   placeholder="Enter question text"
+                  rows={3}
                 />
               </div>
 
