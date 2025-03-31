@@ -53,6 +53,12 @@ export function QuizTaker() {
               ...q,
               options: shuffleArray([...q.options])
             };
+          } else if (q.type === 'sequence-arrangement' && q.sequenceItems) {
+            // Shuffle sequence items but maintain their correct positions
+            return {
+              ...q,
+              sequenceItems: shuffleArray([...q.sequenceItems])
+            };
           }
           return { ...q };
         }))
@@ -589,7 +595,7 @@ export function QuizTaker() {
                     ? "Great job! Nearly perfect!"
                     : score.correct >= score.total * 0.6
                     ? "Good effort! Keep practicing!"
-                    : "Keep practicing, you'll improve!"}
+                    : "You sucks!"}
                 </p>
                 <div className="mt-6">
                   <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
