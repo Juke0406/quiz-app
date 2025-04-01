@@ -4,7 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useQuizStore, type Question, type Quiz } from "@/store/useQuizStore";
-import { ArrowLeft, Check, ChevronDown, Code, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Code, X, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -80,6 +88,7 @@ export function QuizTaker() {
   const [password, setPassword] = useState("");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showResults, setShowResults] = useState(isAllAnswers); // Auto-show results in answers mode
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [shuffledQuiz, setShuffledQuiz] = useState<Quiz | null>(null);
   
   // Function to shuffle an array (Fisher-Yates algorithm)
@@ -327,6 +336,38 @@ export function QuizTaker() {
   };
   
   const score = calculateScore();
+  
+  // Check for unattempted questions
+  const checkForUnattemptedQuestions = () => {
+    if (!shuffledQuiz && !quiz) return false;
+    
+    return userAnswers.some(answer => {
+      const question = (shuffledQuiz || quiz).questions.find(q => q.id === answer.questionId);
+      if (!question) return false;
+      
+      // For multiple choice questions
+      if (question.type === 'multiple-choice') {
+        return answer.selectedOptionIds.length === 0;
+      } 
+      // For fill-in-blanks questions
+      else if (question.type === 'fill-in-blanks' && question.blanks) {
+        return Object.values(answer.blankAnswers || {}).some(val => val.trim() === '');
+      } 
+      // For sequence-arrangement questions
+      else if (question.type === 'sequence-arrangement' && question.sequenceItems) {
+        // Check if any non-prefilled position is still 0 (unassigned)
+        return Object.entries(answer.sequencePositions || {}).some(([itemId, position]) => {
+          // Find the corresponding item to check if its position is prefilled
+          const item = question.sequenceItems?.find(item => item.id === itemId);
+          const isPrefilled = question.preFilledPositions?.includes(item?.correctPosition || 0);
+          // Return true (unattempted) if position is 0 and not prefilled
+          return position === 0 && !isPrefilled;
+        });
+      }
+      
+      return false;
+    });
+  };
 
   if (!isPasswordVerified) {
     return (
@@ -795,9 +836,45 @@ export function QuizTaker() {
 
       <div className="flex justify-end">
         {!showResults && (
-          <Button onClick={() => setShowResults(true)}>Submit Quiz</Button>
+          <Button onClick={() => {
+            const hasUnattemptedQuestions = checkForUnattemptedQuestions();
+            if (hasUnattemptedQuestions) {
+              setShowConfirmDialog(true);
+            } else {
+              setShowResults(true);
+            }
+          }}>Submit Quiz</Button>
         )}
       </div>
+
+      {/* Confirmation Dialog for unattempted questions */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Unattempted Questions
+            </DialogTitle>
+            <DialogDescription>
+              You have unattempted questions. Are you sure you want to submit the quiz?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Go Back
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setShowResults(true);
+              }}
+            >
+              Submit Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
   {showResults && (
     <div className="text-center space-y-6">
