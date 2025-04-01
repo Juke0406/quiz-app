@@ -417,7 +417,7 @@ export function QuizTaker() {
                     <div className="text-sm text-yellow-700">
                       {question.options
                         .filter(option => option.isCorrect)
-                        .map((option, i) => (
+                        .map((option) => (
                           <div key={option.id} className="mb-1">
                             {question.isMultipleAnswer ? `• ${option.text}` : option.text}
                           </div>
