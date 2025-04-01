@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useQuizStore, type Question, type Quiz } from "@/store/useQuizStore";
-import { ArrowLeft, Check, ChevronDown, Code, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Code, Eye, EyeOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -78,6 +78,7 @@ export function QuizTaker() {
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [shuffledQuiz, setShuffledQuiz] = useState<Quiz | null>(null);
+  const [toggledAnswers, setToggledAnswers] = useState<Record<string, boolean>>({});
   
   // Function to shuffle an array (Fisher-Yates algorithm)
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -371,7 +372,7 @@ export function QuizTaker() {
         {(shuffledQuiz || quiz).questions.map((question, index) => (
           <Card key={question.id}>
             <CardHeader>
-              <CardTitle>
+              <CardTitle className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   {isAnswerCorrect(question) && showResults ? (
                     <Check className="text-green-500" />
@@ -380,10 +381,75 @@ export function QuizTaker() {
                   ) : null}
                   Question {index + 1}
                 </div>
+                {!showResults && !isAllQuizzes && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center gap-1 text-xs"
+                    onClick={() => setToggledAnswers(prev => ({
+                      ...prev,
+                      [question.id]: !prev[question.id]
+                    }))}
+                  >
+                    {toggledAnswers[question.id] ? (
+                      <>
+                        <EyeOff className="h-3.5 w-3.5" />
+                        Hide Answer
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3.5 w-3.5" />
+                        Show Answer
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-lg whitespace-pre-wrap">{question.text}</p>
+              
+              {/* Toggled Answer Display */}
+              {toggledAnswers[question.id] && !showResults && (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <div className="font-medium text-yellow-800 mb-1">Answer:</div>
+                  {question.type === 'multiple-choice' && (
+                    <div className="text-sm text-yellow-700">
+                      {question.options
+                        .filter(option => option.isCorrect)
+                        .map((option, i) => (
+                          <div key={option.id} className="mb-1">
+                            {question.isMultipleAnswer ? `• ${option.text}` : option.text}
+                          </div>
+                        ))
+                      }
+                    </div>
+                  )}
+                  
+                  {question.type === 'fill-in-blanks' && question.blanks && (
+                    <div className="text-sm text-yellow-700">
+                      {question.blanks.map((blank, i) => (
+                        <div key={blank.id} className="mb-1">
+                          Blank {i + 1}: {blank.answer}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {question.type === 'sequence-arrangement' && question.sequenceItems && (
+                    <div className="text-sm text-yellow-700">
+                      {[...question.sequenceItems]
+                        .sort((a, b) => a.correctPosition - b.correctPosition)
+                        .map((item) => (
+                          <div key={item.id} className="mb-1">
+                            {item.correctPosition}: {item.text}
+                          </div>
+                        ))
+                      }
+                    </div>
+                  )}
+                </div>
+              )}
 
               {question.codeSnippet && (
                 <div className="space-y-2 border rounded-lg overflow-hidden">
@@ -658,7 +724,7 @@ export function QuizTaker() {
                     ? "Great job! Nearly perfect!"
                     : score.correct >= score.total * 0.6
                     ? "Good effort! Keep practicing!"
-                    : "You need more practice!"}
+                    : "You suck!"}
                 </p>
                 <div className="mt-6">
                   <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
