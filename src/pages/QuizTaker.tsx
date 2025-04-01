@@ -791,187 +791,80 @@ export function QuizTaker() {
         )}
       </div>
 
-      {showResults && (
-        <div className="text-center space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quiz Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center">
-                <div className="text-5xl font-bold">
-                  <span className="text-primary">{score.correct}</span>
-                  <span className="text-gray-400">/{score.total}</span>
-                </div>
-                <p className="mt-4 text-lg">
-                  {score.correct === score.total
-                    ? "Perfect score! Excellent job!"
-                    : score.correct >= score.total * 0.8
-                    ? "Great job! Nearly perfect!"
-                    : score.correct >= score.total * 0.6
-                    ? "Good effort! Keep practicing!"
-                    : "You need more practice!"}
-                </p>
-                <div className="mt-6">
-                  <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Answer Card - Shows all answers in sequential order */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Answers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-left space-y-6">
-                {/* Use original quiz data to avoid randomization */}
-                {isAllQuizzes 
-                  ? quizzes.flatMap(q => q.questions).map((question, index) => (
-                    <div key={question.id} className="border-b pb-4 last:border-0">
-                      <div className="flex items-start gap-2">
-                        <span className="bg-primary text-white px-2 py-1 rounded-md text-sm">Q{index + 1}</span>
-                        <div className="space-y-2 flex-1">
-                          <p className="font-medium whitespace-pre-wrap">{question.text}</p>
-                          
-                          {question.codeSnippet && (
-                            <div className="border rounded-md overflow-hidden">
-                              <div className="bg-gray-100 px-3 py-1 border-b flex items-center gap-2">
-                                <Code className="h-4 w-4" />
-                                <span>Code Snippet</span>
-                              </div>
-                              <pre className="p-3 overflow-x-auto text-sm">
-                                <code>{question.codeSnippet}</code>
-                              </pre>
-                            </div>
-                          )}
-
-                          {/* Display answers based on question type */}
-                          {question.type === 'multiple-choice' && (
-                            <div className="space-y-1 mt-2">
-                              <p className="text-sm font-medium text-gray-500">Correct Answer(s):</p>
-                              <ul className="list-disc list-inside space-y-1">
-                                {question.options
-                                  .filter(option => option.isCorrect)
-                                  .map(option => (
-                                    <li key={option.id} className="text-green-600 whitespace-pre-wrap">
-                                      {option.text}
-                                    </li>
-                                  ))
-                                }
-                              </ul>
-                            </div>
-                          )}
-
-                          {question.type === 'fill-in-blanks' && question.blanks && (
-                            <div className="space-y-1 mt-2">
-                              <p className="text-sm font-medium text-gray-500">Correct Answer(s):</p>
-                              <ul className="list-disc list-inside space-y-1">
-                                {question.blanks.map((blank, blankIndex) => (
-                                  <li key={blank.id} className="text-green-600">
-                                    Blank {blankIndex + 1}: {blank.answer}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {question.type === 'sequence-arrangement' && question.sequenceItems && (
-                            <div className="space-y-1 mt-2">
-                              <p className="text-sm font-medium text-gray-500">Correct Sequence:</p>
-                              <ol className="list-decimal list-inside">
-                                {/* Sort items by correctPosition to show the correct sequence */}
-                                {[...question.sequenceItems]
-                                  .sort((a, b) => a.correctPosition - b.correctPosition)
-                                  .map(item => (
-                                    <li key={item.id} className="text-green-600 whitespace-pre-wrap">
-                                      {item.text}
-                                    </li>
-                                  ))
-                                }
-                              </ol>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                  : quiz.questions.map((question, index) => (
-                    <div key={question.id} className="border-b pb-4 last:border-0">
-                      <div className="flex items-start gap-2">
-                        <span className="bg-primary text-white px-2 py-1 rounded-md text-sm">Q{index + 1}</span>
-                        <div className="space-y-2 flex-1">
-                          <p className="font-medium whitespace-pre-wrap">{question.text}</p>
-                          
-                          {question.codeSnippet && (
-                            <div className="border rounded-md overflow-hidden">
-                              <div className="bg-gray-100 px-3 py-1 border-b flex items-center gap-2">
-                                <Code className="h-4 w-4" />
-                                <span>Code Snippet</span>
-                              </div>
-                              <pre className="p-3 overflow-x-auto text-sm">
-                                <code>{question.codeSnippet}</code>
-                              </pre>
-                            </div>
-                          )}
-
-                          {/* Display answers based on question type */}
-                          {question.type === 'multiple-choice' && (
-                            <div className="space-y-1 mt-2">
-                              <p className="text-sm font-medium text-gray-500">Correct Answer(s):</p>
-                              <ul className="list-disc list-inside space-y-1">
-                                {question.options
-                                  .filter(option => option.isCorrect)
-                                  .map(option => (
-                                    <li key={option.id} className="text-green-600 whitespace-pre-wrap">
-                                      {option.text}
-                                    </li>
-                                  ))
-                                }
-                              </ul>
-                            </div>
-                          )}
-
-                          {question.type === 'fill-in-blanks' && question.blanks && (
-                            <div className="space-y-1 mt-2">
-                              <p className="text-sm font-medium text-gray-500">Correct Answer(s):</p>
-                              <ul className="list-disc list-inside space-y-1">
-                                {question.blanks.map((blank, blankIndex) => (
-                                  <li key={blank.id} className="text-green-600">
-                                    Blank {blankIndex + 1}: {blank.answer}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {question.type === 'sequence-arrangement' && question.sequenceItems && (
-                            <div className="space-y-1 mt-2">
-                              <p className="text-sm font-medium text-gray-500">Correct Sequence:</p>
-                              <ol className="list-decimal list-inside">
-                                {/* Sort items by correctPosition to show the correct sequence */}
-                                {[...question.sequenceItems]
-                                  .sort((a, b) => a.correctPosition - b.correctPosition)
-                                  .map(item => (
-                                    <li key={item.id} className="text-green-600 whitespace-pre-wrap">
-                                      {item.text}
-                                    </li>
-                                  ))
-                                }
-                              </ol>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+  {showResults && (
+    <div className="text-center space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Quiz Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center">
+            <div className="text-5xl font-bold">
+              <span className="text-primary">{score.correct}</span>
+              <span className="text-gray-400">/{score.total}</span>
+            </div>
+            <p className="mt-4 text-lg">
+              {score.correct === score.total
+                ? "Perfect score! Excellent job!"
+                : score.correct >= score.total * 0.8
+                ? "Great job! Nearly perfect!"
+                : score.correct >= score.total * 0.6
+                ? "Good effort! Keep practicing!"
+                : "You need more practice!"}
+            </p>
+            <div className="mt-6 flex gap-4 justify-center">
+              <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
+              <Button 
+                onClick={() => {
+                  // Reset user answers
+                  setUserAnswers([]);
+                  // Reshuffle quiz questions and options
+                  if (quiz) {
+                    // For normal quizzes, we shuffle the questions
+                    // For "all quizzes" mode, the questions are already shuffled in the useMemo
+                    const shuffledQuestions = isAllQuizzes 
+                      ? [...quiz.questions] 
+                      : shuffleArray([...quiz.questions]);
+                    
+                    // Now shuffle options and sequence items for all questions
+                    const newShuffledQuiz = {
+                      ...quiz,
+                      questions: shuffledQuestions.map(q => {
+                        if (q.type === 'multiple-choice') {
+                          // Shuffle options for multiple choice questions
+                          return {
+                            ...q,
+                            options: shuffleArray([...q.options])
+                          };
+                        } else if (q.type === 'sequence-arrangement' && q.sequenceItems) {
+                          // Shuffle sequence items but maintain their correct positions
+                          return {
+                            ...q,
+                            sequenceItems: shuffleArray([...q.sequenceItems])
+                          };
+                        }
+                        return { ...q };
+                      })
+                    };
+                    
+                    setShuffledQuiz(newShuffledQuiz);
+                  }
+                  // Hide results
+                  setShowResults(false);
+                  
+                  // Scroll to the top of the page
+                  window.scrollTo(0, 0);
+                }}
+                variant="outline"
+              >
+                Redo Quiz
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )}
     </div>
   );
 }
