@@ -336,15 +336,23 @@ export function QuizTaker() {
             <CardTitle>Password Required</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter quiz password"
-            />
-            <Button onClick={handlePasswordSubmit} className="w-full">
-              Start Quiz
-            </Button>
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePasswordSubmit();
+              }}
+            >
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter quiz password"
+                className="mb-4"
+              />
+              <Button type="submit" className="w-full">
+                Start Quiz
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
