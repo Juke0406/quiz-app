@@ -79,6 +79,42 @@ export function QuizList() {
           </Card>
         )}
 
+        {/* All Quiz Answers Card */}
+        {sortedQuizzes.length > 0 && (
+          <Card
+            className="hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-emerald-100 border-green-200"
+            onClick={() => navigate(`/quiz/all-answers`)}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl cursor-pointer text-green-700">
+                  All Quizzes Answers
+                </CardTitle>
+                <ListChecks className="h-5 w-5 text-green-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  View all correct answers
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/quiz/all-answers`);
+                  }}
+                >
+                  <ListChecks className="h-4 w-4 mr-1" />
+                  View
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Individual Quiz Cards */}
         {sortedQuizzes.map((quiz) => (
           <Card
