@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QuizMaker } from "./pages/QuizMaker";
 import { QuizList } from "./pages/QuizList";
 import { QuizTaker } from "./pages/QuizTaker";
+import { NotFound } from "./pages/NotFound";
 import { Toaster } from "@/components/ui/toaster";
 import { AccessCode } from "@/components/AccessCode";
 
@@ -37,6 +38,7 @@ function App() {
               }
             />
             <Route path="/quiz/:id" element={<QuizTaker />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Toaster />
