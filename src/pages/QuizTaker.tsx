@@ -708,16 +708,6 @@ export function QuizTaker() {
                 <div className="space-y-2">
                   {question.options.map((option) => {
                     const isSelected = isOptionSelected(question.id, option.id);
-                    const hasIncorrectSelection =
-                      showResults &&
-                      !isAnswerCorrect(question) &&
-                      userAnswers
-                        .find((a) => a.questionId === question.id)
-                        ?.selectedOptionIds.some((id) =>
-                          question.options.find(
-                            (o) => o.id === id && !o.isCorrect
-                          )
-                        );
 
                     return (
                       <label
