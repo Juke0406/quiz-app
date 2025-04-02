@@ -17,11 +17,25 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-100">
-        <main className="container mx-auto py-8">
+        <main className="container mx-auto py-8 px-4 md:px-8">
           <Routes>
             <Route path="/" element={<QuizList />} />
-            <Route path="/create" element={<AccessCode><QuizMaker /></AccessCode>} />
-            <Route path="/edit/:id" element={<AccessCode><QuizMaker /></AccessCode>} />
+            <Route
+              path="/create"
+              element={
+                <AccessCode>
+                  <QuizMaker />
+                </AccessCode>
+              }
+            />
+            <Route
+              path="/edit/:id"
+              element={
+                <AccessCode>
+                  <QuizMaker />
+                </AccessCode>
+              }
+            />
             <Route path="/quiz/:id" element={<QuizTaker />} />
           </Routes>
         </main>

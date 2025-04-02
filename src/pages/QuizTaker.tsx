@@ -4,7 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useQuizStore, type Question, type Quiz } from "@/store/useQuizStore";
-import { ArrowLeft, Check, ChevronDown, Code, X, AlertTriangle } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Code,
+  X,
+  AlertTriangle,
+} from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +35,7 @@ interface ExtendedQuestion extends Question {
 }
 
 // Extended quiz type with the extended questions
-interface ExtendedQuiz extends Omit<Quiz, 'questions'> {
+interface ExtendedQuiz extends Omit<Quiz, "questions"> {
   questions: ExtendedQuestion[];
 }
 
@@ -43,40 +51,40 @@ export function QuizTaker() {
   const navigate = useNavigate();
   const quizzes = useQuizStore((state) => state.quizzes);
   const getQuiz = useQuizStore((state) => state.getQuiz);
-  
+
   // Handle special cases
   const isAllQuizzes = id === "all";
   const isAllAnswers = id === "all-answers";
-  
+
   // For special modes, combine all quizzes
   const quiz = useMemo(() => {
     if (isAllQuizzes || isAllAnswers) {
       if (quizzes.length === 0) {
         return null;
       }
-      
+
       // Get the password from the first quiz that has one (all passwords are the same)
-      const commonPassword = quizzes.find(q => q.password)?.password || "";
-      
+      const commonPassword = quizzes.find((q) => q.password)?.password || "";
+
       // Flatten all questions from all quizzes and add source quiz title
-      const allQuestions = quizzes.flatMap(q => 
-        q.questions.map(question => ({
+      const allQuestions = quizzes.flatMap((q) =>
+        q.questions.map((question) => ({
           ...question,
-          quizTitle: q.title // Add the source quiz title to each question
+          quizTitle: q.title, // Add the source quiz title to each question
         }))
       );
-      
+
       // All-answers mode - no randomization of questions
-      const finalQuestions = isAllAnswers 
-        ? allQuestions 
+      const finalQuestions = isAllAnswers
+        ? allQuestions
         : [...allQuestions].sort(() => Math.random() - 0.5); // Randomly shuffle for quiz mode
-      
+
       // Create the combined quiz
       return {
         id: isAllAnswers ? "all-answers" : "all",
         title: isAllAnswers ? "All Quizzes Answers" : "All Quizzes",
         password: isAllAnswers ? "" : commonPassword, // No password needed for answers view
-        questions: finalQuestions
+        questions: finalQuestions,
       } as ExtendedQuiz;
     } else {
       // Normal single quiz
@@ -84,13 +92,15 @@ export function QuizTaker() {
     }
   }, [id, quizzes, getQuiz, isAllQuizzes, isAllAnswers]);
 
-  const [isPasswordVerified, setIsPasswordVerified] = useState(!quiz?.password || isAllQuizzes || isAllAnswers);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(
+    !quiz?.password || isAllQuizzes || isAllAnswers
+  );
   const [password, setPassword] = useState("");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showResults, setShowResults] = useState(isAllAnswers); // Auto-show results in answers mode
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [shuffledQuiz, setShuffledQuiz] = useState<Quiz | null>(null);
-  
+
   // Function to shuffle an array (Fisher-Yates algorithm)
   const shuffleArray = <T,>(array: T[]): T[] => {
     const arrayCopy = [...array];
@@ -106,31 +116,31 @@ export function QuizTaker() {
     if (quiz && isPasswordVerified) {
       // For normal quizzes, we also shuffle the questions
       // For "all quizzes" mode, the questions are already shuffled in the useMemo above
-      const shuffledQuestions = isAllQuizzes 
-        ? [...quiz.questions] 
+      const shuffledQuestions = isAllQuizzes
+        ? [...quiz.questions]
         : shuffleArray([...quiz.questions]);
-      
+
       // Now shuffle options and sequence items for all questions
       const shuffled = {
         ...quiz,
-        questions: shuffledQuestions.map(q => {
-          if (q.type === 'multiple-choice') {
+        questions: shuffledQuestions.map((q) => {
+          if (q.type === "multiple-choice") {
             // Shuffle options for multiple choice questions
             return {
               ...q,
-              options: shuffleArray([...q.options])
+              options: shuffleArray([...q.options]),
             };
-          } else if (q.type === 'sequence-arrangement' && q.sequenceItems) {
+          } else if (q.type === "sequence-arrangement" && q.sequenceItems) {
             // Shuffle sequence items but maintain their correct positions
             return {
               ...q,
-              sequenceItems: shuffleArray([...q.sequenceItems])
+              sequenceItems: shuffleArray([...q.sequenceItems]),
             };
           }
           return { ...q };
-        })
+        }),
       };
-      
+
       setShuffledQuiz(shuffled);
     }
   }, [quiz, isPasswordVerified, isAllQuizzes]);
@@ -154,24 +164,27 @@ export function QuizTaker() {
   useEffect(() => {
     if (shuffledQuiz && !userAnswers.length) {
       // Pre-initialize empty answers for the questions
-      const initialAnswers = shuffledQuiz.questions.map(question => {
+      const initialAnswers = shuffledQuiz.questions.map((question) => {
         const baseAnswer: UserAnswer = {
           questionId: question.id,
-          selectedOptionIds: []
+          selectedOptionIds: [],
         };
-        
+
         // Add empty answers for fill-in-blanks
-        if (question.type === 'fill-in-blanks' && question.blanks) {
+        if (question.type === "fill-in-blanks" && question.blanks) {
           baseAnswer.blankAnswers = {};
-          question.blanks.forEach(blank => {
-            baseAnswer.blankAnswers![blank.id] = '';
+          question.blanks.forEach((blank) => {
+            baseAnswer.blankAnswers![blank.id] = "";
           });
         }
-        
+
         // Add empty sequence positions
-        if (question.type === 'sequence-arrangement' && question.sequenceItems) {
+        if (
+          question.type === "sequence-arrangement" &&
+          question.sequenceItems
+        ) {
           baseAnswer.sequencePositions = {};
-          question.sequenceItems.forEach(item => {
+          question.sequenceItems.forEach((item) => {
             // Pre-fill positions that are marked as prefilled
             if (question.preFilledPositions?.includes(item.correctPosition)) {
               baseAnswer.sequencePositions![item.id] = item.correctPosition;
@@ -180,10 +193,10 @@ export function QuizTaker() {
             }
           });
         }
-        
+
         return baseAnswer;
       });
-      
+
       setUserAnswers(initialAnswers);
     }
   }, [shuffledQuiz]);
@@ -191,7 +204,9 @@ export function QuizTaker() {
   const handleOptionSelect = (questionId: string, optionId: string) => {
     setUserAnswers((prev) => {
       const existingAnswer = prev.find((a) => a.questionId === questionId);
-      const question = (shuffledQuiz || quiz).questions.find((q) => q.id === questionId);
+      const question = (shuffledQuiz || quiz).questions.find(
+        (q) => q.id === questionId
+      );
 
       if (!question) return prev;
 
@@ -226,33 +241,41 @@ export function QuizTaker() {
       ];
     });
   };
-  
-  const handleBlankAnswerChange = (questionId: string, blankId: string, value: string) => {
-    setUserAnswers(prev => 
-      prev.map(answer => 
+
+  const handleBlankAnswerChange = (
+    questionId: string,
+    blankId: string,
+    value: string
+  ) => {
+    setUserAnswers((prev) =>
+      prev.map((answer) =>
         answer.questionId === questionId
           ? {
               ...answer,
               blankAnswers: {
                 ...(answer.blankAnswers || {}),
-                [blankId]: value
-              }
+                [blankId]: value,
+              },
             }
           : answer
       )
     );
   };
-  
-  const handleSequencePositionChange = (questionId: string, itemId: string, position: number) => {
-    setUserAnswers(prev => 
-      prev.map(answer => 
+
+  const handleSequencePositionChange = (
+    questionId: string,
+    itemId: string,
+    position: number
+  ) => {
+    setUserAnswers((prev) =>
+      prev.map((answer) =>
         answer.questionId === questionId
           ? {
               ...answer,
               sequencePositions: {
                 ...(answer.sequencePositions || {}),
-                [itemId]: position
-              }
+                [itemId]: position,
+              },
             }
           : answer
       )
@@ -267,32 +290,42 @@ export function QuizTaker() {
   const isAnswerCorrect = (question: Question) => {
     const answer = userAnswers.find((a) => a.questionId === question.id);
     if (!answer) return false;
-    
+
     // For multiple choice questions
-    if (question.type === 'multiple-choice') {
+    if (question.type === "multiple-choice") {
       const correctOptionIds = question.options
         .filter((o) => o.isCorrect)
         .map((o) => o.id);
-  
+
       return (
         answer.selectedOptionIds.length === correctOptionIds.length &&
         answer.selectedOptionIds.every((id) => correctOptionIds.includes(id))
       );
     }
-    
+
     // For fill in the blanks questions
-    else if (question.type === 'fill-in-blanks' && question.blanks && answer.blankAnswers) {
-      return question.blanks.every(blank => {
-        const userAnswer = answer.blankAnswers?.[blank.id] || '';
+    else if (
+      question.type === "fill-in-blanks" &&
+      question.blanks &&
+      answer.blankAnswers
+    ) {
+      return question.blanks.every((blank) => {
+        const userAnswer = answer.blankAnswers?.[blank.id] || "";
         // Case insensitive comparison and trimming whitespace
-        return userAnswer.trim().toLowerCase() === blank.answer.trim().toLowerCase();
+        return (
+          userAnswer.trim().toLowerCase() === blank.answer.trim().toLowerCase()
+        );
       });
     }
-    
+
     // For sequence arrangement questions
-    else if (question.type === 'sequence-arrangement' && question.sequenceItems && answer.sequencePositions) {
+    else if (
+      question.type === "sequence-arrangement" &&
+      question.sequenceItems &&
+      answer.sequencePositions
+    ) {
       // Every item needs to be in its correct position
-      return question.sequenceItems.every(item => {
+      return question.sequenceItems.every((item) => {
         const userPosition = answer.sequencePositions?.[item.id];
         // If position is prefilled, it's already correct
         if (question.preFilledPositions?.includes(item.correctPosition)) {
@@ -301,83 +334,104 @@ export function QuizTaker() {
         return userPosition === item.correctPosition;
       });
     }
-    
+
     return false;
   };
-  
+
   // Check if any sequence item is already assigned the given position
   // This is used to prevent duplicate position selections
-  const isPositionAssigned = (questionId: string, position: number, excludeItemId?: string) => {
-    const answer = userAnswers.find(a => a.questionId === questionId);
+  const isPositionAssigned = (
+    questionId: string,
+    position: number,
+    excludeItemId?: string
+  ) => {
+    const answer = userAnswers.find((a) => a.questionId === questionId);
     if (!answer?.sequencePositions) return false;
-    
+
     return Object.entries(answer.sequencePositions).some(
       ([itemId, pos]) => pos === position && itemId !== excludeItemId
     );
   };
-  
+
   // Calculate the total score (number of correct answers)
   const calculateScore = () => {
-    if (!showResults || !(shuffledQuiz || quiz)) return { correct: 0, total: 0 };
-    
+    if (!showResults || !(shuffledQuiz || quiz))
+      return { correct: 0, total: 0 };
+
     const questions = (shuffledQuiz || quiz).questions;
     let correctCount = 0;
-    
-    questions.forEach(question => {
+
+    questions.forEach((question) => {
       if (isAnswerCorrect(question)) {
         correctCount++;
       }
     });
-    
+
     return {
       correct: correctCount,
-      total: questions.length
+      total: questions.length,
     };
   };
-  
+
   const score = calculateScore();
-  
+  const isMobile = useIsMobile();
+
   // Check for unattempted questions
   const checkForUnattemptedQuestions = () => {
     if (!shuffledQuiz && !quiz) return false;
-    
-    return userAnswers.some(answer => {
-      const question = (shuffledQuiz || quiz).questions.find(q => q.id === answer.questionId);
+
+    return userAnswers.some((answer) => {
+      const question = (shuffledQuiz || quiz).questions.find(
+        (q) => q.id === answer.questionId
+      );
       if (!question) return false;
-      
+
       // For multiple choice questions
-      if (question.type === 'multiple-choice') {
+      if (question.type === "multiple-choice") {
         return answer.selectedOptionIds.length === 0;
-      } 
-      // For fill-in-blanks questions
-      else if (question.type === 'fill-in-blanks' && question.blanks) {
-        return Object.values(answer.blankAnswers || {}).some(val => val.trim() === '');
-      } 
-      // For sequence-arrangement questions
-      else if (question.type === 'sequence-arrangement' && question.sequenceItems) {
-        // Check if any non-prefilled position is still 0 (unassigned)
-        return Object.entries(answer.sequencePositions || {}).some(([itemId, position]) => {
-          // Find the corresponding item to check if its position is prefilled
-          const item = question.sequenceItems?.find(item => item.id === itemId);
-          const isPrefilled = question.preFilledPositions?.includes(item?.correctPosition || 0);
-          // Return true (unattempted) if position is 0 and not prefilled
-          return position === 0 && !isPrefilled;
-        });
       }
-      
+      // For fill-in-blanks questions
+      else if (question.type === "fill-in-blanks" && question.blanks) {
+        return Object.values(answer.blankAnswers || {}).some(
+          (val) => val.trim() === ""
+        );
+      }
+      // For sequence-arrangement questions
+      else if (
+        question.type === "sequence-arrangement" &&
+        question.sequenceItems
+      ) {
+        // Check if any non-prefilled position is still 0 (unassigned)
+        return Object.entries(answer.sequencePositions || {}).some(
+          ([itemId, position]) => {
+            // Find the corresponding item to check if its position is prefilled
+            const item = question.sequenceItems?.find(
+              (item) => item.id === itemId
+            );
+            const isPrefilled = question.preFilledPositions?.includes(
+              item?.correctPosition || 0
+            );
+            // Return true (unattempted) if position is 0 and not prefilled
+            return position === 0 && !isPrefilled;
+          }
+        );
+      }
+
       return false;
     });
   };
 
   if (!isPasswordVerified) {
     return (
-      <div className="max-w-md mx-auto mt-8">
+      <div
+        className={`${isMobile ? "max-w-full px-4" : "max-w-md"} mx-auto mt-8`}
+      >
         <Card>
           <CardHeader>
             <CardTitle>Password Required</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form 
+            <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handlePasswordSubmit();
@@ -404,18 +458,27 @@ export function QuizTaker() {
   if (isAllAnswers) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div
+          className={`flex ${
+            isMobile
+              ? "flex-col gap-4"
+              : "flex-row justify-between items-center"
+          }`}
+        >
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-3xl font-bold">{quiz.title}</h1>
+            <h1 className={`${isMobile ? "text-2xl" : "text-3xl"} font-bold`}>
+              {quiz.title}
+            </h1>
           </div>
         </div>
-        
+
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-green-700 font-medium">
-            Viewing all quiz answers in their original order, without randomization.
+            Viewing all quiz answers in their original order, without
+            randomization.
           </p>
         </div>
 
@@ -437,110 +500,138 @@ export function QuizTaker() {
                     const numA = parseInt(matchA[1], 10);
                     const numB = parseInt(matchB[1], 10);
                     return numA - numB;
-                  } 
+                  }
                   // If only one has a numerical prefix, prioritize it
                   else if (matchA) {
                     return -1; // A comes first
-                  } 
-                  else if (matchB) {
-                    return 1;  // B comes first
+                  } else if (matchB) {
+                    return 1; // B comes first
                   }
                   // Otherwise, use standard alphabetical sorting
                   return a.title.localeCompare(b.title);
                 })
-                .flatMap(q => 
+                .flatMap((q) =>
                   // Map each quiz to its questions with index
                   q.questions.map((question, qIndex) => (
-                  <div key={question.id} className="border-b pb-4 last:border-0">
-                    <div className="flex items-start gap-2">
-                      <span className="bg-primary text-white px-2 py-1 rounded-md text-sm">Q{qIndex + 1}</span>
-                      <div className="space-y-2 flex-1">
-                        {/* Show source quiz title for each question */}
-                        <div className="text-sm text-gray-500 mb-1">
-                          From: {q.title}
+                    <div
+                      key={question.id}
+                      className="border-b pb-4 last:border-0"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="bg-primary text-white px-2 py-1 rounded-md text-sm">
+                          Q{qIndex + 1}
+                        </span>
+                        <div className="space-y-2 flex-1">
+                          {/* Show source quiz title for each question */}
+                          <div className="text-sm text-gray-500 mb-1">
+                            From: {q.title}
+                          </div>
+                          <p className="font-medium whitespace-pre-wrap">
+                            {question.text}
+                          </p>
+
+                          {question.codeSnippet && (
+                            <div className="border rounded-md overflow-hidden">
+                              <div className="bg-gray-100 px-3 py-1 border-b flex items-center gap-2">
+                                <Code className="h-4 w-4" />
+                                <span>Code Snippet</span>
+                              </div>
+                              <pre className="p-3 overflow-x-auto text-sm">
+                                <code>{question.codeSnippet}</code>
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* Display answers based on question type */}
+                          {question.type === "multiple-choice" && (
+                            <div className="space-y-1 mt-2">
+                              <p className="text-sm font-medium text-gray-500">
+                                Options:
+                              </p>
+                              <div className="space-y-2">
+                                {question.options.map((option) => (
+                                  <div
+                                    key={option.id}
+                                    className={cn(
+                                      "p-2 border rounded-md flex items-center gap-2",
+                                      option.isCorrect
+                                        ? "border-green-300 bg-green-50"
+                                        : "border-gray-200"
+                                    )}
+                                  >
+                                    {option.isCorrect ? (
+                                      <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    ) : (
+                                      <div className="w-4 h-4 flex-shrink-0" />
+                                    )}
+                                    <span
+                                      className={cn(
+                                        "whitespace-pre-wrap",
+                                        option.isCorrect
+                                          ? "text-green-700 font-medium"
+                                          : "text-gray-700"
+                                      )}
+                                    >
+                                      {option.text}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {question.type === "fill-in-blanks" &&
+                            question.blanks && (
+                              <div className="space-y-1 mt-2">
+                                <p className="text-sm font-medium text-gray-500">
+                                  Correct Answer(s):
+                                </p>
+                                <ul className="list-disc list-inside space-y-1">
+                                  {question.blanks.map((blank, blankIndex) => (
+                                    <li
+                                      key={blank.id}
+                                      className="text-green-600"
+                                    >
+                                      Blank {blankIndex + 1}: {blank.answer}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                          {question.type === "sequence-arrangement" &&
+                            question.sequenceItems && (
+                              <div className="space-y-1 mt-2">
+                                <p className="text-sm font-medium text-gray-500">
+                                  Correct Sequence:
+                                </p>
+                                <ol className="list-decimal list-inside">
+                                  {/* Sort items by correctPosition to show the correct sequence */}
+                                  {[...question.sequenceItems]
+                                    .sort(
+                                      (a, b) =>
+                                        a.correctPosition - b.correctPosition
+                                    )
+                                    .map((item) => (
+                                      <li
+                                        key={item.id}
+                                        className="text-green-600 whitespace-pre-wrap"
+                                      >
+                                        {item.text}
+                                      </li>
+                                    ))}
+                                </ol>
+                              </div>
+                            )}
                         </div>
-                        <p className="font-medium whitespace-pre-wrap">{question.text}</p>
-                        
-                        {question.codeSnippet && (
-                          <div className="border rounded-md overflow-hidden">
-                            <div className="bg-gray-100 px-3 py-1 border-b flex items-center gap-2">
-                              <Code className="h-4 w-4" />
-                              <span>Code Snippet</span>
-                            </div>
-                            <pre className="p-3 overflow-x-auto text-sm">
-                              <code>{question.codeSnippet}</code>
-                            </pre>
-                          </div>
-                        )}
-
-                        {/* Display answers based on question type */}
-                        {question.type === 'multiple-choice' && (
-                          <div className="space-y-1 mt-2">
-                            <p className="text-sm font-medium text-gray-500">Options:</p>
-                            <div className="space-y-2">
-                              {question.options.map(option => (
-                                <div 
-                                  key={option.id} 
-                                  className={cn(
-                                    "p-2 border rounded-md flex items-center gap-2",
-                                    option.isCorrect ? "border-green-300 bg-green-50" : "border-gray-200"
-                                  )}
-                                >
-                                  {option.isCorrect ? (
-                                    <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 flex-shrink-0" />
-                                  )}
-                                  <span className={cn(
-                                    "whitespace-pre-wrap",
-                                    option.isCorrect ? "text-green-700 font-medium" : "text-gray-700"
-                                  )}>
-                                    {option.text}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {question.type === 'fill-in-blanks' && question.blanks && (
-                          <div className="space-y-1 mt-2">
-                            <p className="text-sm font-medium text-gray-500">Correct Answer(s):</p>
-                            <ul className="list-disc list-inside space-y-1">
-                              {question.blanks.map((blank, blankIndex) => (
-                                <li key={blank.id} className="text-green-600">
-                                  Blank {blankIndex + 1}: {blank.answer}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {question.type === 'sequence-arrangement' && question.sequenceItems && (
-                          <div className="space-y-1 mt-2">
-                            <p className="text-sm font-medium text-gray-500">Correct Sequence:</p>
-                            <ol className="list-decimal list-inside">
-                              {/* Sort items by correctPosition to show the correct sequence */}
-                              {[...question.sequenceItems]
-                                .sort((a, b) => a.correctPosition - b.correctPosition)
-                                .map(item => (
-                                  <li key={item.id} className="text-green-600 whitespace-pre-wrap">
-                                    {item.text}
-                                  </li>
-                                ))
-                              }
-                            </ol>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
             </div>
           </CardContent>
         </Card>
-        
+
         <div className="flex justify-center">
           <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
         </div>
@@ -551,15 +642,21 @@ export function QuizTaker() {
   // Normal quiz-taking mode
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div
+        className={`flex ${
+          isMobile ? "flex-col gap-4" : "flex justify-between items-center"
+        }`}
+      >
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold">{quiz.title}</h1>
+          <h1 className={`${isMobile ? "text-2xl" : "text-3xl"} font-bold`}>
+            {quiz.title}
+          </h1>
         </div>
       </div>
-      
+
       {isAllQuizzes && (
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-blue-700 font-medium">
@@ -607,7 +704,7 @@ export function QuizTaker() {
               )}
 
               {/* Multiple Choice Questions */}
-              {question.type === 'multiple-choice' && (
+              {question.type === "multiple-choice" && (
                 <div className="space-y-2">
                   {question.options.map((option) => {
                     const isSelected = isOptionSelected(question.id, option.id);
@@ -631,7 +728,9 @@ export function QuizTaker() {
                       >
                         <div
                           className={cn(
-                            "flex items-center p-3 rounded-md border transition-colors",
+                            `flex items-center ${
+                              isMobile ? "p-2" : "p-3"
+                            } rounded-md border transition-colors`,
                             {
                               // Default state
                               "border-gray-200 hover:border-gray-300":
@@ -662,7 +761,9 @@ export function QuizTaker() {
                             <div className="flex items-center justify-center w-6 h-6">
                               <input
                                 type={
-                                  question.isMultipleAnswer ? "checkbox" : "radio"
+                                  question.isMultipleAnswer
+                                    ? "checkbox"
+                                    : "radio"
                                 }
                                 checked={isSelected}
                                 onChange={() =>
@@ -672,7 +773,9 @@ export function QuizTaker() {
                                 className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
                               />
                             </div>
-                            <span className="flex-1 whitespace-pre-wrap">{option.text}</span>
+                            <span className="flex-1 whitespace-pre-wrap">
+                              {option.text}
+                            </span>
                           </div>
                         </div>
                       </label>
@@ -680,34 +783,50 @@ export function QuizTaker() {
                   })}
                 </div>
               )}
-              
+
               {/* Fill in the Blanks Questions */}
-              {question.type === 'fill-in-blanks' && question.blanks && (
+              {question.type === "fill-in-blanks" && question.blanks && (
                 <div className="space-y-4">
                   {question.blanks.map((blank, index) => {
-                    const answer = userAnswers.find(a => a.questionId === question.id);
-                    const userAnswer = answer?.blankAnswers?.[blank.id] || '';
-                    const isCorrect = userAnswer.trim().toLowerCase() === blank.answer.trim().toLowerCase();
-                    
+                    const answer = userAnswers.find(
+                      (a) => a.questionId === question.id
+                    );
+                    const userAnswer = answer?.blankAnswers?.[blank.id] || "";
+                    const isCorrect =
+                      userAnswer.trim().toLowerCase() ===
+                      blank.answer.trim().toLowerCase();
+
                     return (
                       <div key={blank.id} className="space-y-1">
-                        <label className="text-sm font-medium">Blank {index + 1}</label>
+                        <label className="text-sm font-medium">
+                          Blank {index + 1}
+                        </label>
                         <div className="relative">
                           <Input
                             value={userAnswer}
-                            onChange={(e) => handleBlankAnswerChange(question.id, blank.id, e.target.value)}
+                            onChange={(e) =>
+                              handleBlankAnswerChange(
+                                question.id,
+                                blank.id,
+                                e.target.value
+                              )
+                            }
                             placeholder="Your answer"
                             disabled={showResults}
                             className={cn({
-                              "border-green-500 bg-green-50": showResults && isCorrect,
-                              "border-red-500 bg-red-50": showResults && !isCorrect && userAnswer.trim() !== '',
+                              "border-green-500 bg-green-50":
+                                showResults && isCorrect,
+                              "border-red-500 bg-red-50":
+                                showResults &&
+                                !isCorrect &&
+                                userAnswer.trim() !== "",
                             })}
                           />
                           {showResults && (
                             <div className="mt-1">
                               {isCorrect ? (
                                 <div className="text-green-600 text-sm flex items-center">
-                                  <Check className="h-4 w-4 mr-1" /> 
+                                  <Check className="h-4 w-4 mr-1" />
                                   Correct
                                 </div>
                               ) : (
@@ -729,121 +848,175 @@ export function QuizTaker() {
                   })}
                 </div>
               )}
-              
+
               {/* Sequence Arrangement Questions */}
-              {question.type === 'sequence-arrangement' && question.sequenceItems && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    {/* Items with their dropdown menus */}
-                    {question.sequenceItems.map((item) => {
-                      const answer = userAnswers.find(a => a.questionId === question.id);
-                      const selectedPosition = answer?.sequencePositions?.[item.id] || 0;
-                      const isPrefilled = question.preFilledPositions?.includes(item.correctPosition);
-                      const isCorrect = selectedPosition === item.correctPosition;
-                      
-                      return (
-                        <div 
-                          key={item.id} 
-                          className={cn("p-3 border rounded-md", {
-                            "bg-gray-100 border-gray-300": isPrefilled,
-                            "bg-green-50 border-green-500": showResults && isCorrect && !isPrefilled,
-                            "bg-red-50 border-red-500": showResults && !isCorrect && selectedPosition > 0 && !isPrefilled,
-                          })}
-                        >
-                          <div className="flex items-center gap-3">
-                            {/* Dropdown first (on the left) */}
-                            <div className="w-28">
-                              {isPrefilled ? (
-                                <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded-md text-center">
-                                  Position {item.correctPosition}
-                                </div>
-                              ) : (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger
-                                    disabled={showResults}
-                                    className={cn(
-                                      "w-full flex items-center justify-between px-3 py-2 border rounded-md text-left",
-                                      {
-                                        "border-red-300 bg-red-50": showResults && !isCorrect && selectedPosition > 0,
-                                        "border-green-500 bg-green-50": showResults && isCorrect,
-                                        "border-blue-300 bg-blue-50": selectedPosition > 0 && !showResults,
-                                        "border-gray-300": selectedPosition === 0 && !showResults,
-                                      }
-                                    )}
-                                  >
-                                    <span>
-                                      {selectedPosition > 0
-                                        ? `${selectedPosition}${
-                                            isPositionAssigned(question.id, selectedPosition, selectedPosition === selectedPosition ? item.id : undefined)
-                                              ? " (used)"
-                                              : ""
-                                          }`
-                                        : ""}
-                                    </span>
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="start" className="w-56">
-                                    {Array.from(
-                                      { length: question.sequenceItems?.length || 0 },
-                                      (_, i) => i + 1
-                                    )
-                                      .filter(
-                                        pos =>
-                                          !question.preFilledPositions?.includes(pos) || pos === selectedPosition
+              {question.type === "sequence-arrangement" &&
+                question.sequenceItems && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      {/* Items with their dropdown menus */}
+                      {question.sequenceItems.map((item) => {
+                        const answer = userAnswers.find(
+                          (a) => a.questionId === question.id
+                        );
+                        const selectedPosition =
+                          answer?.sequencePositions?.[item.id] || 0;
+                        const isPrefilled =
+                          question.preFilledPositions?.includes(
+                            item.correctPosition
+                          );
+                        const isCorrect =
+                          selectedPosition === item.correctPosition;
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn("p-3 border rounded-md", {
+                              "bg-gray-100 border-gray-300": isPrefilled,
+                              "bg-green-50 border-green-500":
+                                showResults && isCorrect && !isPrefilled,
+                              "bg-red-50 border-red-500":
+                                showResults &&
+                                !isCorrect &&
+                                selectedPosition > 0 &&
+                                !isPrefilled,
+                            })}
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Dropdown first (on the left) */}
+                              <div className="w-28">
+                                {isPrefilled ? (
+                                  <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded-md text-center">
+                                    Position {item.correctPosition}
+                                  </div>
+                                ) : (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                      disabled={showResults}
+                                      className={cn(
+                                        "w-full flex items-center justify-between px-3 py-2 border rounded-md text-left",
+                                        {
+                                          "border-red-300 bg-red-50":
+                                            showResults &&
+                                            !isCorrect &&
+                                            selectedPosition > 0,
+                                          "border-green-500 bg-green-50":
+                                            showResults && isCorrect,
+                                          "border-blue-300 bg-blue-50":
+                                            selectedPosition > 0 &&
+                                            !showResults,
+                                          "border-gray-300":
+                                            selectedPosition === 0 &&
+                                            !showResults,
+                                        }
+                                      )}
+                                    >
+                                      <span>
+                                        {selectedPosition > 0
+                                          ? `${selectedPosition}${
+                                              isPositionAssigned(
+                                                question.id,
+                                                selectedPosition,
+                                                selectedPosition ===
+                                                  selectedPosition
+                                                  ? item.id
+                                                  : undefined
+                                              )
+                                                ? " (used)"
+                                                : ""
+                                            }`
+                                          : ""}
+                                      </span>
+                                      <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="start"
+                                      className="w-56"
+                                    >
+                                      {Array.from(
+                                        {
+                                          length:
+                                            question.sequenceItems?.length || 0,
+                                        },
+                                        (_, i) => i + 1
                                       )
-                                      .map((pos) => (
-                                        <DropdownMenuItem
-                                          key={pos}
-                                          onSelect={() => handleSequencePositionChange(
-                                            question.id,
-                                            item.id,
-                                            pos
-                                          )}
-                                          className={cn({
-                                            "bg-blue-100": selectedPosition === pos,
-                                          })}
-                                        >
-                                          {pos}
-                                          {isPositionAssigned(question.id, pos, selectedPosition === pos ? item.id : undefined)
-                                            ? " (used)"
-                                            : ""}
-                                        </DropdownMenuItem>
-                                      ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
+                                        .filter(
+                                          (pos) =>
+                                            !question.preFilledPositions?.includes(
+                                              pos
+                                            ) || pos === selectedPosition
+                                        )
+                                        .map((pos) => (
+                                          <DropdownMenuItem
+                                            key={pos}
+                                            onSelect={() =>
+                                              handleSequencePositionChange(
+                                                question.id,
+                                                item.id,
+                                                pos
+                                              )
+                                            }
+                                            className={cn({
+                                              "bg-blue-100":
+                                                selectedPosition === pos,
+                                            })}
+                                          >
+                                            {pos}
+                                            {isPositionAssigned(
+                                              question.id,
+                                              pos,
+                                              selectedPosition === pos
+                                                ? item.id
+                                                : undefined
+                                            )
+                                              ? " (used)"
+                                              : ""}
+                                          </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
+
+                              {/* Item text (on the right) */}
+                              <div className="text-sm flex-1 whitespace-pre-wrap">
+                                {item.text}
+                              </div>
                             </div>
-                            
-                            {/* Item text (on the right) */}
-                            <div className="text-sm flex-1 whitespace-pre-wrap">{item.text}</div>
+
+                            {showResults && !isCorrect && !isPrefilled && (
+                              <div className="mt-2 ml-28 text-xs text-red-600">
+                                Correct position: {item.correctPosition}
+                              </div>
+                            )}
                           </div>
-                          
-                          {showResults && !isCorrect && !isPrefilled && (
-                            <div className="mt-2 ml-28 text-xs text-red-600">
-                              Correct position: {item.correctPosition}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="flex justify-end">
+      <div
+        className={`flex ${isMobile ? "justify-center mt-6" : "justify-end"}`}
+      >
         {!showResults && (
-          <Button onClick={() => {
-            const hasUnattemptedQuestions = checkForUnattemptedQuestions();
-            if (hasUnattemptedQuestions) {
-              setShowConfirmDialog(true);
-            } else {
-              setShowResults(true);
-            }
-          }}>Submit Quiz</Button>
+          <Button
+            className={isMobile ? "w-full py-6 text-lg" : ""}
+            onClick={() => {
+              const hasUnattemptedQuestions = checkForUnattemptedQuestions();
+              if (hasUnattemptedQuestions) {
+                setShowConfirmDialog(true);
+              } else {
+                setShowResults(true);
+              }
+            }}
+          >
+            Submit Quiz
+          </Button>
         )}
       </div>
 
@@ -856,14 +1029,18 @@ export function QuizTaker() {
               Unattempted Questions
             </DialogTitle>
             <DialogDescription>
-              You have unattempted questions. Are you sure you want to submit the quiz?
+              You have unattempted questions. Are you sure you want to submit
+              the quiz?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+            >
               Go Back
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 setShowConfirmDialog(false);
                 setShowResults(true);
@@ -875,81 +1052,95 @@ export function QuizTaker() {
         </DialogContent>
       </Dialog>
 
+      {showResults && (
+        <div className="text-center space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quiz Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <div className="text-5xl font-bold">
+                  <span className="text-primary">{score.correct}</span>
+                  <span className="text-gray-400">/{score.total}</span>
+                </div>
+                <p className="mt-4 text-lg">
+                  {score.correct === score.total
+                    ? "Perfect score! Excellent job!"
+                    : score.correct >= score.total * 0.8
+                    ? "Great job! Nearly perfect!"
+                    : score.correct >= score.total * 0.6
+                    ? "Good effort! Keep practicing!"
+                    : "You need more practice!"}
+                </p>
+                <div
+                  className={`mt-6 flex ${
+                    isMobile ? "flex-col" : ""
+                  } gap-4 justify-center`}
+                >
+                  <Button
+                    className={isMobile ? "py-6 text-lg" : ""}
+                    onClick={() => navigate("/")}
+                  >
+                    Back to Quiz List
+                  </Button>
+                  <Button
+                    className={isMobile ? "py-6 text-lg" : ""}
+                    onClick={() => {
+                      // Reset user answers
+                      setUserAnswers([]);
+                      // Reshuffle quiz questions and options
+                      if (quiz) {
+                        // For normal quizzes, we shuffle the questions
+                        // For "all quizzes" mode, the questions are already shuffled in the useMemo
+                        const shuffledQuestions = isAllQuizzes
+                          ? [...quiz.questions]
+                          : shuffleArray([...quiz.questions]);
 
-  {showResults && (
-    <div className="text-center space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Quiz Results</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center">
-            <div className="text-5xl font-bold">
-              <span className="text-primary">{score.correct}</span>
-              <span className="text-gray-400">/{score.total}</span>
-            </div>
-            <p className="mt-4 text-lg">
-              {score.correct === score.total
-                ? "Perfect score! Excellent job!"
-                : score.correct >= score.total * 0.8
-                ? "Great job! Nearly perfect!"
-                : score.correct >= score.total * 0.6
-                ? "Good effort! Keep practicing!"
-                : "You need more practice!"}
-            </p>
-            <div className="mt-6 flex gap-4 justify-center">
-              <Button onClick={() => navigate("/")}>Back to Quiz List</Button>
-              <Button 
-                onClick={() => {
-                  // Reset user answers
-                  setUserAnswers([]);
-                  // Reshuffle quiz questions and options
-                  if (quiz) {
-                    // For normal quizzes, we shuffle the questions
-                    // For "all quizzes" mode, the questions are already shuffled in the useMemo
-                    const shuffledQuestions = isAllQuizzes 
-                      ? [...quiz.questions] 
-                      : shuffleArray([...quiz.questions]);
-                    
-                    // Now shuffle options and sequence items for all questions
-                    const newShuffledQuiz = {
-                      ...quiz,
-                      questions: shuffledQuestions.map(q => {
-                        if (q.type === 'multiple-choice') {
-                          // Shuffle options for multiple choice questions
-                          return {
-                            ...q,
-                            options: shuffleArray([...q.options])
-                          };
-                        } else if (q.type === 'sequence-arrangement' && q.sequenceItems) {
-                          // Shuffle sequence items but maintain their correct positions
-                          return {
-                            ...q,
-                            sequenceItems: shuffleArray([...q.sequenceItems])
-                          };
-                        }
-                        return { ...q };
-                      })
-                    };
-                    
-                    setShuffledQuiz(newShuffledQuiz);
-                  }
-                  // Hide results
-                  setShowResults(false);
-                  
-                  // Scroll to the top of the page
-                  window.scrollTo(0, 0);
-                }}
-                variant="outline"
-              >
-                Redo Quiz
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )}
+                        // Now shuffle options and sequence items for all questions
+                        const newShuffledQuiz = {
+                          ...quiz,
+                          questions: shuffledQuestions.map((q) => {
+                            if (q.type === "multiple-choice") {
+                              // Shuffle options for multiple choice questions
+                              return {
+                                ...q,
+                                options: shuffleArray([...q.options]),
+                              };
+                            } else if (
+                              q.type === "sequence-arrangement" &&
+                              q.sequenceItems
+                            ) {
+                              // Shuffle sequence items but maintain their correct positions
+                              return {
+                                ...q,
+                                sequenceItems: shuffleArray([
+                                  ...q.sequenceItems,
+                                ]),
+                              };
+                            }
+                            return { ...q };
+                          }),
+                        };
+
+                        setShuffledQuiz(newShuffledQuiz);
+                      }
+                      // Hide results
+                      setShowResults(false);
+
+                      // Scroll to the top of the page
+                      window.scrollTo(0, 0);
+                    }}
+                    variant="outline"
+                  >
+                    Redo Quiz
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

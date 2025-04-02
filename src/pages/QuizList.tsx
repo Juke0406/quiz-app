@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuizStore } from "@/store/useQuizStore";
 import { Plus, Lock, Unlock, Edit, ListChecks } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function QuizList() {
   const navigate = useNavigate();
   const quizzes = useQuizStore((state) => state.quizzes);
-  
+  const isMobile = useIsMobile();
+
   // Sort quizzes by title, handling numerical prefixes (e.g., "1. Quiz", "2. Quiz", "10. Quiz")
   const sortedQuizzes = [...quizzes].sort((a, b) => {
     // Check if titles start with numbers (e.g., "1. ", "10. ")
@@ -20,13 +22,12 @@ export function QuizList() {
       const numA = parseInt(matchA[1], 10);
       const numB = parseInt(matchB[1], 10);
       return numA - numB;
-    } 
+    }
     // If only one has a numerical prefix, prioritize it
     else if (matchA) {
       return -1; // A comes first
-    } 
-    else if (matchB) {
-      return 1;  // B comes first
+    } else if (matchB) {
+      return 1; // B comes first
     }
     // Otherwise, use standard alphabetical sorting
     return a.title.localeCompare(b.title);
@@ -34,9 +35,18 @@ export function QuizList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Available Quizzes</h1>
-        <Button onClick={() => navigate("/create")}>
+      <div
+        className={`flex ${
+          isMobile ? "flex-col gap-4" : "justify-between items-center"
+        }`}
+      >
+        <h1 className={`${isMobile ? "text-2xl" : "text-3xl"} font-bold`}>
+          Available Quizzes
+        </h1>
+        <Button
+          onClick={() => navigate("/create")}
+          className={isMobile ? "w-full py-6 text-lg" : ""}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Quiz
         </Button>
@@ -58,14 +68,20 @@ export function QuizList() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center">
+              <div
+                className={`flex ${
+                  isMobile ? "flex-col gap-2" : "justify-between items-center"
+                }`}
+              >
                 <div className="text-sm text-muted-foreground">
                   {sortedQuizzes.length} Quizzes Available
                 </div>
                 <Button
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   variant="outline"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  className={`border-blue-300 text-blue-700 hover:bg-blue-100 ${
+                    isMobile ? "w-full py-5" : ""
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/quiz/all`);
@@ -94,14 +110,20 @@ export function QuizList() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center">
+              <div
+                className={`flex ${
+                  isMobile ? "flex-col gap-2" : "justify-between items-center"
+                }`}
+              >
                 <div className="text-sm text-muted-foreground">
                   View all correct answers
                 </div>
                 <Button
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   variant="outline"
-                  className="border-green-300 text-green-700 hover:bg-green-100"
+                  className={`border-green-300 text-green-700 hover:bg-green-100 ${
+                    isMobile ? "w-full py-5" : ""
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/quiz/all-answers`);
@@ -135,13 +157,18 @@ export function QuizList() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center">
+              <div
+                className={`flex ${
+                  isMobile ? "flex-col gap-2" : "justify-between items-center"
+                }`}
+              >
                 <div className="text-sm text-muted-foreground">
                   {quiz.questions.length} Questions
                 </div>
                 <Button
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   variant="outline"
+                  className={isMobile ? "w-full py-5" : ""}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/edit/${quiz.id}`);
