@@ -748,12 +748,11 @@ export function QuizTaker() {
                               "bg-red-100 border-red-500":
                                 showResults && isSelected && !option.isCorrect,
 
-                              // Not selected but correct (only show when there's an incorrect selection)
+                              // Show all correct options in results, even if not selected
                               "bg-green-50 border-green-300":
                                 showResults &&
                                 !isSelected &&
-                                option.isCorrect &&
-                                hasIncorrectSelection,
+                                option.isCorrect,
                             }
                           )}
                         >
