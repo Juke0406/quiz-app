@@ -4,13 +4,5 @@
             "source": "/(.*)",
             "destination": "/index.html"
         }
-    ],
-    "routes": [
-        { 
-            "handle": "error", 
-            "status": 404, 
-            "src": ".*", 
-            "dest": "/404.html" 
-        }
     ]
 }
